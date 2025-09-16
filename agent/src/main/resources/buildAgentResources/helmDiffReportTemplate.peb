@@ -56,24 +56,31 @@
         td.kind, td.name, td.ns { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
         code { background: var(--ring-selected-background); border: 1px solid var(--border); padding: 1px 6px; border-radius: 6px; }
         .pill {
-            display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .02em;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; letter-spacing: .02em; line-height: 1;
             padding: 4px 8px; border-radius: 999px; border: 1px solid transparent;
         }
-        .pill.added   { color: color-mix(in oklab, var(--added) 8%, black); background: color-mix(in oklab, var(--added) 20%, white); border-color: var(--added); }
-        .pill.changed { color: color-mix(in oklab, var(--changed) 12%, black); background: color-mix(in oklab, var(--changed) 20%, white); border-color: var(--changed); }
-        .pill.deleted { color: color-mix(in oklab, var(--deleted) 8%, black); background: color-mix(in oklab, var(--deleted) 18%, white); border-color: var(--deleted); }
+
+        .pill.added   { color: var(--added); background: transparent; border-color: var(--added); }
+        .pill.changed { color: var(--changed); background: transparent; border-color: var(--changed); }
+        .pill.deleted { color: var(--deleted); background: transparent; border-color: var(--deleted); }
+
         .legend { display:flex; gap:10px; }
         .legend .pill { cursor: default; }
         .sr { position:absolute; left:-9999px; }
+        /* Icon utilities: use Ring UI SVGs as masks so they inherit currentColor */
+        .icon { display:block; width:12px; height:12px; background-color: currentColor; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center; -webkit-mask-size:contain; mask-size:contain; }
+        .icon-add { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path fill="%23000" d="M5 1h2v4h4v2H7v4H5V7H1V5h4z"/></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path fill="%23000" d="M5 1h2v4h4v2H7v4H5V7H1V5h4z"/></svg>'); }
+        .icon-modified { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><circle fill="%23000" cx="6" cy="6" r="3"/></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><circle fill="%23000" cx="6" cy="6" r="3"/></svg>'); }
+        .icon-remove { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><rect fill="%23000" x="1" y="5" width="10" height="2"/></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><rect fill="%23000" x="1" y="5" width="10" height="2"/></svg>'); }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="toolbar" role="toolbar" aria-label="Legend and actions">
         <div class="legend" aria-hidden="true">
-            <span class="pill added">ADDED</span>
-            <span class="pill changed">CHANGED</span>
-            <span class="pill deleted">DELETED</span>
+            <span class="pill added" title="Added"><span class="icon icon-add" aria-hidden="true"></span><span class="sr">ADDED</span></span>
+            <span class="pill changed" title="Modified"><span class="icon icon-modified" aria-hidden="true"></span><span class="sr">CHANGED</span></span>
+            <span class="pill deleted" title="Removed"><span class="icon icon-remove" aria-hidden="true"></span><span class="sr">DELETED</span></span>
         </div>
         <button type="button" class="ring-button ring-button_primary" id="refreshBtn">Refresh</button>
     </div>
@@ -113,6 +120,12 @@
         "DELETED": "deleted"
     }[bucket] || "changed");
 
+    const iconClass = (bucket) => ({
+        "ADDED": "icon-add",
+        "CHANGED": "icon-modified",
+        "DELETED": "icon-remove"
+    }[bucket] || "icon-modified");
+
     const rows = document.getElementById("rows");
     rows.innerHTML = ""; // clear placeholder
 
@@ -120,7 +133,7 @@
         const bucket = normalizeChange(item.change);
         const tr = document.createElement("tr");
         tr.innerHTML = `
-      <td><span class="pill ${pillClass(bucket)}" title="${item.change || bucket}">${bucket}</span></td>
+      <td><span class="pill ${pillClass(bucket)}" title="${item.change || bucket}"><span class=\"icon ${iconClass(bucket)}\" aria-hidden=\"true\"></span><span class=\"sr\">${bucket}</span></span></td>
       <td class="kind"><code>${item.kind || ""}</code></td>
       <td class="name" title="${item.name || ""}">${item.name || ""}</td>
       <td class="ns"><code>${item.namespace || ""}</code></td>
