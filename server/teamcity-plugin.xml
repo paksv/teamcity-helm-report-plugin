@@ -2,14 +2,14 @@
 <teamcity-plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xsi:noNamespaceSchemaLocation="urn:shemas-jetbrains-com:teamcity-plugin-v1-xml">
     <info>
-        <name>terraformSupport</name>
-        <display-name>Terraform Support</display-name>
+        <name>HelmDiffSupport</name>
+        <display-name>Helm Diff Support</display-name>
         <version>@Version@</version> <!-- will be replaced from script -->
         <vendor>
             <name>JetBrains</name>
             <url>https://jetbrains.com</url>
         </vendor>
-        <description>Provide information about Terraform changes</description>
+        <description>Provide information about Helm Diff</description>
     </info>
     <deployment use-separate-classloader="true" allow-runtime-reload="true" node-responsibilities-aware="true"/>
 </teamcity-plugin>

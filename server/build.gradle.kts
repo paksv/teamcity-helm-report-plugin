@@ -24,7 +24,7 @@ teamcity {
     server {
         descriptor = file("teamcity-plugin.xml")
         tokens = mapOf("Version" to rootProject.version)
-        archiveName = "terraform-plugin"
+        archiveName = "helm-diff-report-plugin"
     }
 
     environments {
@@ -38,7 +38,7 @@ teamcity {
 
 
 tasks.withType<Jar> {
-    archiveBaseName.set("terraform-plugin")
+    archiveBaseName.set("helm-diff-report-plugin")
 }
 
 task("teamcity") {

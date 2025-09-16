@@ -16,7 +16,7 @@ teamcity {
             }
         }
 
-        archiveName = "terraform-agent"
+        archiveName = "helm-diff-report-agent"
     }
 }
 
@@ -40,10 +40,10 @@ configurations.all {
     exclude(group = "org.slf4j")
 }
 
-var mainClassName = "jetbrains.buildServer.terraformSupportPlugin.TerraformSupport"
+var mainClassName = "jetbrains.buildServer.helmReport.HelmDiffSupport"
 
 tasks.withType<Jar> {
-    archiveBaseName.set("terraform-agent")
+    archiveBaseName.set("helm-diff-report-agent")
 }
 
 tasks["agentPlugin"].doLast {

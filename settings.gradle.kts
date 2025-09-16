@@ -4,4 +4,4 @@ include(
     "common"
 )
 
-rootProject.name = "terraform-plugin"
+rootProject.name = "helm-diff-report-plugin"

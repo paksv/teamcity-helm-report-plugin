@@ -14,5 +14,5 @@ teamcity {
 
 
 tasks.withType<Jar> {
-    archiveBaseName.set("terraform-common")
+    archiveBaseName.set("helm-diff-report-common")
 }
