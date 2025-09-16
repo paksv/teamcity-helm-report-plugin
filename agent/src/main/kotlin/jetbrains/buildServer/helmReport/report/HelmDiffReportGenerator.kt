@@ -5,13 +5,14 @@ import io.pebbletemplates.pebble.loader.ClasspathLoader
 import io.pebbletemplates.pebble.template.PebbleTemplate
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.helmReport.HelmDiffFeatureConstants
+import jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData
 import jetbrains.buildServer.helmReport.jsonOutput.model.PlanData
 import java.io.File
 import java.io.FileWriter
 
 class HelmDiffReportGenerator(
     private val myLogger: BuildProgressLogger,
-    private val myPlanData: PlanData
+    private val myPlanData: HelmPlanData
 ) {
     private fun getTemplate(): PebbleTemplate {
         val resourcesLoader = ClasspathLoader()

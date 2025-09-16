@@ -32,6 +32,7 @@ teamcity {
             homeDir = "/Users/spak/TeamCity"
             version = rootProject.extra["teamcityVersion"] as String
             dataDir = "/Users/spak/TeamCity/adata"
+            agentOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
         }
     }
 }

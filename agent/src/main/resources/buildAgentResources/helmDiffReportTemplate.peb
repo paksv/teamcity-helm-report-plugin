@@ -64,7 +64,7 @@
     {% endautoescape %}
 {% endmacro %}
 {# END OF MACRO BLOCK #}
-{# @pebvariable name="planData" type="jetbrains.buildServer.helmReport.jsonOutput.model.PlanData" #}
+{# @pebvariable name="planData" type="jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData" #}
 {# @pebvariable name="_name" type="String" #}
 <h2>
     Plan file: {{ planData.fileName }}
@@ -75,29 +75,18 @@
         Planned resource changes:
     </h3>
     </p>
-    {% for resource in planData.changedResources %}
-        <button class="collapsible {{ resource.collapsibleButtonColorCSSClass }}">
-            <small>{{ resource.addressPrefix }}</small><br>
-            {{ resource.name }} [{{ resource.actions | join(',') }}]
+    {% for helmChange in planData.changedResources %}
+        <button class="collapsible {{ helmChange.collapsibleButtonColorCSSClass }}">
+            <small>{{ helmChange.namespace }}</small><br>
+            {{ helmChange.name }}
         </button>
 
         <div class="content">
-            {% if resource.hasChangedValues %}
-                {% for valueDelta in resource.getChangedValues %}
-                    {{ renderValueDelta(valueDelta) }}
-                {% endfor %}
+            {% if helmChange.isModify %}
+                <small>{{ helmChange.namespace }}</small><br>
+                {{ helmChange.name }}
             {% endif %}
         </div>
-    {% endfor %}
-{% endif %}
-
-{% if planData.getHasChangedOutputValues %}
-    <br/>
-    <h3>
-        Planned output value changes:
-    </h3>
-    {% for entry in planData.getChangedOutputValues.entrySet() %}
-        {{ renderValueDelta(entry.value.delta, _name = entry.key) }}
     {% endfor %}
 {% endif %}
 

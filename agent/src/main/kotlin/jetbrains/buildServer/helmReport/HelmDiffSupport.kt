@@ -6,6 +6,8 @@ import jetbrains.buildServer.agent.artifacts.ArtifactsWatcher
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessage
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessageTypes
 import jetbrains.buildServer.helmReport.jsonOutput.ParsingUtil
+import jetbrains.buildServer.helmReport.jsonOutput.model.HelmChange
+import jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData
 import jetbrains.buildServer.helmReport.jsonOutput.model.PlanData
 import jetbrains.buildServer.helmReport.jsonOutput.model.ResourceChange
 import jetbrains.buildServer.helmReport.report.HelmDiffReportGenerator
@@ -48,15 +50,14 @@ class HelmDiffSupport(
     private fun parsePlanDataFromFile(
         logger: BuildProgressLogger,
         planOutputFile: File
-    ): PlanData {
+    ): HelmPlanData {
         logger.debug("Parsing report data from the ${planOutputFile.absolutePath}")
         val objectMapper = ParsingUtil.getObjectMapper()
-        val planData = objectMapper.readValue(
+        val changes: List<HelmChange> = objectMapper.readValue(
             planOutputFile,
-            PlanData::class.java
-        )
-        planData.fileName = planOutputFile.name
-        return planData
+            Array<HelmChange>::class.java
+        ).toList()
+        return HelmPlanData(planOutputFile.name, changes)
     }
 
     private fun logResourceTypeData(
@@ -72,50 +73,18 @@ class HelmDiffSupport(
         logger.debug("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     }
 
-    private fun checkProtectedResources(
-        logger: BuildProgressLogger,
-        configuration: HelmDiffFeatureConfiguration,
-        planData: PlanData
-    ): Boolean {
-        val pattern = configuration.getProtectedResourcePattern()!!
-        logger.message("Handling protected resources (pattern: '$pattern')")
-
-        val changedProtectedResources = planData
-            .changedResources
-            .filter {
-                val matches = MatcherUtil.matches(it.type, pattern, 10)
-                logResourceTypeData(logger, it, matches)
-
-                matches && (it.isDeleted || it.isReplaced)
-            }
-        changedProtectedResources.forEach {
-            createBuildProblem(
-                logger,
-                "Protected resource '${it}' is planned for destroy or replace",
-                "Protected resource '${it.type}' is planned for destroy or replace"
-            )
-        }
-
-        return changedProtectedResources.isNotEmpty()
-    }
 
     private fun updateBuildStatusWithPlanData(
         logger: BuildProgressLogger,
-        planData: PlanData,
-        plannedProtectedResourceChanges: Boolean
+        planData: HelmPlanData
     ) {
         logger.message("Updating build status")
         if (!planData.hasChangedResources) {
             updateBuildStatus(logger, "No resource changes are planned")
-        } else if (plannedProtectedResourceChanges) {
-            updateBuildStatus(logger, "Protected resources are planned for replacement/destroy, check the report")
         } else {
             updateBuildStatus(
                 logger,
-                "${planData.createdResources.size} to create, " +
-                        "${planData.updatedResources.size} to update, " +
-                        "${planData.replacedResources.size} to replace, " +
-                        "${planData.deletedResources.size} to delete"
+                        "${planData.changedResources.size} to change, "
             )
         }
     }
@@ -155,16 +124,12 @@ class HelmDiffSupport(
             )
 
             ServiceMessageBlock(logger, "Handle Terraform output").use {
-                val planData = parsePlanDataFromFile(logger, planFile)
+                val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
                 HelmDiffReportGenerator(logger, planData).generate(reportFile)
 
-                var plannedProtectedResourceChanges = false
-                if (configuration.hasProtectedResourcePattern()) {
-                    plannedProtectedResourceChanges = checkProtectedResources(logger, configuration, planData)
-                }
 
                 if (configuration.updateBuildStatus()) {
-                    updateBuildStatusWithPlanData(logger, planData, plannedProtectedResourceChanges)
+                    updateBuildStatusWithPlanData(logger, planData)
                 }
             }
 
