@@ -1,108 +1,136 @@
-{# START OF MACRO BLOCK #}
-{% macro renderForcesReplacement(valueDelta) %}
-{# @pebvariable name="valueDelta" type="jetbrains.buildServer.helmReport.jsonOutput.deltas.ValueDelta" #}
-    {% if valueDelta.forcesReplacement %}
-        <span class="redTextColor"># forces replacement</span>
-    {% endif %}
-{% endmacro %}
-
-{% macro renderChangeSymbol(changeType, spaces=1) %}
-{# @pebvariable name="changeType" type="jetbrains.buildServer.helmReport.report.ChangeType" #}
-{# @pebvariable name="spaces" type="Integer" #}
-    <span class="{{ changeType.cssClass }}">
-        {{ changeType.symbol }}
-        {% for i in 1..spaces %}
-            &nbsp;
-        {% endfor %}
-    </span>
-{% endmacro %}
-
-{% macro renderNameBlock(valueDelta, _name="") %}
-{# @pebvariable name="valueDelta" type="jetbrains.buildServer.helmReport.jsonOutput.deltas.ValueDelta" #}
-{# @pebvariable name="_name" type="String" #}
-    {% if _name is not empty %}
-        <b>{{ _name }}</b> =
-    {% elseif valueDelta.name is not empty %}
-        <b>{{ valueDelta.name }}</b> =
-    {% endif %}
-{% endmacro %}
-
-{% macro renderValueDelta(valueDelta, indent=0, _name="") %}
-{# @pebvariable name="valueDelta" type="jetbrains.buildServer.helmReport.jsonOutput.deltas.ValueDelta" #}
-{# @pebvariable name="indent" type="Integer" #}
-{# @pebvariable name="_name" type="String" #}
-    {% if valueDelta.isComplex %}
-        {{ renderComplexValueDelta(valueDelta, indent, _name) }}
-    {% endif %}
-    {% if not valueDelta.isComplex %}
-        {{ renderSimpleValueDelta(valueDelta, indent, _name) }}
-    {% endif %}
-{% endmacro %}
-
-{% macro renderComplexValueDelta(valueDelta, indent, _name) %}
-{# @pebvariable name="valueDelta" type="jetbrains.buildServer.helmReport.jsonOutput.deltas.ComplexValueDelta" #}
-{# @pebvariable name="indent" type="Integer" #}
-{# @pebvariable name="spaces" type="Integer" #}
-{# @pebvariable name="_name" type="String" #}
-{# @pebvariable name="indentation" type="jetbrains.buildServer.helmReport.report.IndentationFunction" #}
-    {% autoescape false %}
-    {{ renderChangeSymbol(valueDelta.changeType) }}{{ indentation(indent) }}{{ renderNameBlock(valueDelta, _name = _name) }}{{ valueDelta.openingBracket }}{{ renderForcesReplacement(valueDelta) }}<br>
-    {% for nestedValueDelta in valueDelta.getChangedValues -%}
-        {{ renderValueDelta(nestedValueDelta, indent = indent + 1) }}
-    {% endfor %}
-    {{ renderChangeSymbol(valueDelta.changeType, spaces = 2) }}{{ indentation(indent) }}{{ valueDelta.closingBracket }}<br>
-    {% endautoescape %}
-{% endmacro %}
-
-{% macro renderSimpleValueDelta(simpleValueDelta, indent=0, _name) %}
-{# @pebvariable name="simpleValueDelta" type="jetbrains.buildServer.helmReport.jsonOutput.deltas.SimpleValueDelta" #}
-{# @pebvariable name="indent" type="Integer" #}
-{# @pebvariable name="_name" type="String" #}
-{# @pebvariable name="indentation" type="jetbrains.buildServer.helmReport.report.IndentationFunction" #}
-    {% autoescape false %}
-    {{ renderChangeSymbol(simpleValueDelta.changeType) }}{{ indentation(indent) }}{{ renderNameBlock(simpleValueDelta, _name = _name) }}{{ simpleValueDelta.represent }}{{ renderForcesReplacement(simpleValueDelta) }}<br>
-    {% endautoescape %}
-{% endmacro %}
-{# END OF MACRO BLOCK #}
-{# @pebvariable name="planData" type="jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData" #}
-{# @pebvariable name="_name" type="String" #}
-<h2>
-    Plan file: {{ planData.fileName }}
-</h2>
-{% if planData.hasChangedResources %}
-    <p>
-    <h3>
-        Planned resource changes:
-    </h3>
-    </p>
-    {% for helmChange in planData.changedResources %}
-        <button class="collapsible {{ helmChange.collapsibleButtonColorCSSClass }}">
-            <small>{{ helmChange.namespace }}</small><br>
-            {{ helmChange.name }}
-        </button>
-
-        <div class="content">
-            {% if helmChange.isModify %}
-                <small>{{ helmChange.namespace }}</small><br>
-                {{ helmChange.name }}
-            {% endif %}
-        </div>
-    {% endfor %}
-{% endif %}
-
-<script type="text/javascript">
-    var coll = document.getElementsByClassName("collapsible");
-    var i;
-
-    for (i = 0; i < coll.length; i++) {
-        coll[i].addEventListener("click", function () {
-            this.classList.toggle("active");
-            var content = this.nextElementSibling;
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
-            } else {
-                content.style.maxHeight = content.scrollHeight + "px";
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>helm diff – changes</title>
+    <!-- JetBrains Ring UI base stylesheet (contains CSS variables and component styles) -->
+    <link rel="stylesheet" href="https://unpkg.com/@jetbrains/ring-ui@latest/dist/style.css" />
+    <style>
+        /* Map local tokens to JetBrains Ring UI theme variables with sensible fallbacks */
+        :root {
+            --bg: var(--ring-content-background, #0b0d12);
+            --fg: var(--ring-text-color, #e6e8ef);
+            --muted: var(--ring-secondary-color, #a7adbb);
+            --row: var(--ring-content-background, #111621);
+            --border: var(--ring-line-color, #222836);
+            --changed: var(--ring-warning-color, #ffb020);
+            --added: var(--ring-success-color, #22c55e);
+            --deleted: var(--ring-error-color, #ef4444);
+        }
+        /* Standalone light/dark fallbacks when Ring variables are not provided (e.g., local file) */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: var(--ring-content-background, #ffffff);
+                --fg: var(--ring-text-color, #222222);
+                --muted: var(--ring-secondary-color, #6b7280);
+                --row: var(--ring-content-background, #ffffff);
+                --border: var(--ring-line-color, #e5e7eb);
             }
-        });
-    }
+            /* Ensure code chips use light background in light theme when Ring variables are absent */
+            code { background: var(--ring-selected-background, #f5f7fa); }
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: var(--ring-content-background, #0b0d12);
+                --fg: var(--ring-text-color, #e6e8ef);
+                --muted: var(--ring-secondary-color, #a7adbb);
+                --row: var(--ring-content-background, #111621);
+                --border: var(--ring-line-color, #222836);
+            }
+            /* In dark theme, ensure code chips use dark background when Ring vars are absent */
+            code { background: var(--ring-selected-background, #0d1220); }
+        }
+        body { background: var(--bg); color: var(--fg); font: 14px/1.428 var(--ring-font-family, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial); margin: 0; padding: 24px; }
+        .wrap { max-width: 1100px; margin: 0 auto; }
+        .toolbar { display:flex; align-items:center; gap:8px; margin: 0 0 12px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        thead th {
+            text-align: left; font-weight: 600; color: var(--muted);
+            padding: 12px 14px; border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; background: var(--bg); z-index: 1;
+        }
+        tbody tr { background: var(--row); }
+        tbody tr + tr td { border-top: 1px solid var(--border); }
+        td { padding: 12px 14px; white-space: nowrap; }
+        td.kind, td.name, td.ns { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+        code { background: var(--ring-selected-background); border: 1px solid var(--border); padding: 1px 6px; border-radius: 6px; }
+        .pill {
+            display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .02em;
+            padding: 4px 8px; border-radius: 999px; border: 1px solid transparent;
+        }
+        .pill.added   { color: color-mix(in oklab, var(--added) 8%, black); background: color-mix(in oklab, var(--added) 20%, white); border-color: var(--added); }
+        .pill.changed { color: color-mix(in oklab, var(--changed) 12%, black); background: color-mix(in oklab, var(--changed) 20%, white); border-color: var(--changed); }
+        .pill.deleted { color: color-mix(in oklab, var(--deleted) 8%, black); background: color-mix(in oklab, var(--deleted) 18%, white); border-color: var(--deleted); }
+        .legend { display:flex; gap:10px; }
+        .legend .pill { cursor: default; }
+        .sr { position:absolute; left:-9999px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="toolbar" role="toolbar" aria-label="Legend and actions">
+        <div class="legend" aria-hidden="true">
+            <span class="pill added">ADDED</span>
+            <span class="pill changed">CHANGED</span>
+            <span class="pill deleted">DELETED</span>
+        </div>
+        <button type="button" class="ring-button ring-button_primary" id="refreshBtn">Refresh</button>
+    </div>
+
+    <table aria-label="Helm diff changes">
+        <thead>
+        <tr>
+            <th style="width:120px">Change</th>
+            <th style="width:120px">Kind</th>
+            <th>Name</th>
+            <th style="width:180px">Namespace</th>
+            <th style="width:120px">API</th>
+        </tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="5" style="color:var(--muted)">No data</td></tr></tbody>
+    </table>
+</div>
+
+<script>
+{# @pebvariable name="planData" type="String" #}
+  // Parse the planData string to convert to a JSON object/array.
+  const planDataStr = {{ planData | json_encode | raw }};
+  const data = JSON.parse(planDataStr);
+
+    // Map various Helm diff verbs to 3 buckets: ADDED / CHANGED / DELETED
+    const normalizeChange = (s="") => {
+        const x = String(s).toUpperCase();
+        if (["ADD","ADDED","CREATE","CREATED","NEW"].includes(x)) return "ADDED";
+        if (["DEL","DELETE","DELETED","REMOVE","REMOVED"].includes(x)) return "DELETED";
+        // Fallback bucket
+        return "CHANGED"; // MODIFY, CHANGE, UPDATE, PATCH, RENAME, etc.
+    };
+
+    const pillClass = (bucket) => ({
+        "ADDED": "added",
+        "CHANGED": "changed",
+        "DELETED": "deleted"
+    }[bucket] || "changed");
+
+    const rows = document.getElementById("rows");
+    rows.innerHTML = ""; // clear placeholder
+
+    data.forEach(item => {
+        const bucket = normalizeChange(item.change);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+      <td><span class="pill ${pillClass(bucket)}" title="${item.change || bucket}">${bucket}</span></td>
+      <td class="kind"><code>${item.kind || ""}</code></td>
+      <td class="name" title="${item.name || ""}">${item.name || ""}</td>
+      <td class="ns"><code>${item.namespace || ""}</code></td>
+      <td><code>${item.api || ""}</code></td>
+    `;
+        rows.appendChild(tr);
+    });
+
+    // Example of using a Ring UI button: simple refresh action
+    document.getElementById("refreshBtn")?.addEventListener("click", () => window.location.reload());
 </script>
+</body>
+</html>

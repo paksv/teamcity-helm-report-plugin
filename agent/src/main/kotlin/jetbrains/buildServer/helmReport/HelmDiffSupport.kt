@@ -124,11 +124,10 @@ class HelmDiffSupport(
             )
 
             ServiceMessageBlock(logger, "Handle Terraform output").use {
-                val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
-                HelmDiffReportGenerator(logger, planData).generate(reportFile)
-
+                HelmDiffReportGenerator(logger, planFile.readText()).generate(reportFile)
 
                 if (configuration.updateBuildStatus()) {
+                    val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
                     updateBuildStatusWithPlanData(logger, planData)
                 }
             }

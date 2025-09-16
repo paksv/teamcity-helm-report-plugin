@@ -1,58 +1,55 @@
+:root {
+    /* Map to Ring UI variables with fallbacks so it works outside TeamCity too */
+    --bg: var(--ring-content-background, #ffffff);
+    --fg: var(--ring-text-color, #222222);
+    --line: var(--ring-line-color, #e5e7eb);
+    --selected: var(--ring-selected-background, #f1f5f9);
+    --info: var(--ring-info-color, #5bc0de);
+    --success: var(--ring-success-color, #5cb85c);
+    --warning: var(--ring-warning-color, #f0ad4e);
+    --error: var(--ring-error-color, #d9534f);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: var(--ring-content-background, #0b0d12);
+        --fg: var(--ring-text-color, #e6e8ef);
+        --line: var(--ring-line-color, #222836);
+        --selected: var(--ring-selected-background, #0d1220);
+    }
+}
+
 .collapsible {
-    background-color: #777;
-    color: white;
+    background-color: var(--selected);
+    color: var(--fg);
     cursor: pointer;
     padding: 9px;
     width: 100%;
-    border: none;
+    border: 1px solid var(--line);
     text-align: left;
     outline: none;
     font-size: 15px;
 }
 
-.blueBackground {
-    background: #5bc0de;
-}
+.blueBackground { background: var(--info); }
+.greenBackground { background: var(--success); }
+.orangeBackground { background: var(--warning); }
+.redBackground { background: var(--error); }
 
-.greenBackground {
-    background: #5cb85c;
-}
+.fallbackBackground { background: var(--bg); }
 
-.orangeBackground {
-    background: #f0ad4e;
-}
+.greenTextColor { color: var(--success); }
+.orangeTextColor { color: var(--warning); }
+.redTextColor { color: var(--error); }
 
-.redBackground {
-    background: #d9534f;
-}
-
-.fallbackBackground {
-    background: #292b2c;
-}
-
-.greenTextColor {
-    color: #5cb85c;
-}
-
-.orangeTextColor {
-    color: #f0ad4e;
-}
-
-.redTextColor {
-    color: #d9534f;
-}
-
-.fallbackTextColor {
-    color: #292b2c;
-}
+.fallbackTextColor { color: var(--fg); }
 
 .collapsible:hover {
-    opacity: 0.6;
+    opacity: 0.9;
 }
 
 .collapsible:after {
     content: '\002B';
-    color: white;
+    color: var(--fg);
     font-weight: bold;
     float: right;
     margin-left: 5px;
@@ -67,5 +64,7 @@
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.2s ease-out;
-    background-color: #f1f1f1;
+    background-color: var(--bg);
+    border: 1px solid var(--line);
+    border-top: none;
 }
