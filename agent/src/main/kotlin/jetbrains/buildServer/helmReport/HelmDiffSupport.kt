@@ -3,12 +3,12 @@ package jetbrains.buildServer.helmReport
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.agent.artifacts.ArtifactsWatcher
+import jetbrains.buildServer.helmReport.diffParser.HelmDiffParser
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessage
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessageTypes
 import jetbrains.buildServer.helmReport.jsonOutput.ParsingUtil
 import jetbrains.buildServer.helmReport.jsonOutput.model.HelmChange
 import jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData
-import jetbrains.buildServer.helmReport.jsonOutput.model.ResourceChange
 import jetbrains.buildServer.helmReport.report.HelmDiffReportGenerator
 import jetbrains.buildServer.util.EventDispatcher
 import java.io.Closeable
@@ -55,26 +55,20 @@ class HelmDiffSupport(
         logger: BuildProgressLogger,
         planOutputFile: File
     ): HelmPlanData {
-        logger.debug("Parsing report data from the ${planOutputFile.absolutePath}")
-        val objectMapper = ParsingUtil.getObjectMapper()
-        val changes: List<HelmChange> = objectMapper.readValue(
-            planOutputFile,
-            Array<HelmChange>::class.java
-        ).toList()
-        return HelmPlanData(planOutputFile.name, changes)
-    }
-
-    private fun logResourceTypeData(
-        logger: BuildProgressLogger,
-        resource: ResourceChange,
-        matches: Boolean
-    ) {
-        logger.debug("-=- Checking resource $resource -=-")
-        logger.debug("isChanged: ${resource.isChanged}, " +
-                "isDeleted: ${resource.isDeleted}, " +
-                "isReplaced: ${resource.isReplaced}")
-        logger.debug("matches: $matches")
-        logger.debug("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+        val text = planOutputFile.readText()
+        try {
+            logger.debug("Parsing template report data from the ${planOutputFile.absolutePath}")
+            val objectMapper = ParsingUtil.getObjectMapper()
+            val changes: List<HelmChange> = objectMapper.readValue(
+                text,
+                Array<HelmChange>::class.java
+            ).toList()
+            return HelmPlanData(planOutputFile.name, changes, text)
+        } catch (_: Exception) {
+            logger.debug("data file doesn't seem to be a helm diff template. Will parse it as a raw diff")
+        }
+        logger.debug("Will now parse raw diff output")
+        return HelmPlanData(planOutputFile.name, HelmDiffParser.parse(text))
     }
 
 
@@ -134,11 +128,11 @@ class HelmDiffSupport(
                 HelmDiffFeatureConstants.HIDDEN_ARTIFACT_REPORT_FILENAME
             )
 
-            ServiceMessageBlock(logger, "Handle Terraform output").use {
-                HelmDiffReportGenerator(logger, planFile.readText()).generate(reportFile)
+            ServiceMessageBlock(logger, "Handle Helm Diff output").use {
+                val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
+                HelmDiffReportGenerator(logger, planData.jsonData).generate(reportFile)
 
                 if (configuration.updateBuildStatus()) {
-                    val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
                     updateBuildStatusWithPlanData(logger, planData)
                 }
             }
