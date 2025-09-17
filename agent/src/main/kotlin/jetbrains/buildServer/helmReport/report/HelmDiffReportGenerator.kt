@@ -10,10 +10,11 @@ import java.io.File
 import java.io.FileWriter
 import io.pebbletemplates.pebble.extension.Filter
 import io.pebbletemplates.pebble.template.EvaluationContext
+import jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData
 
 class HelmDiffReportGenerator(
     private val myLogger: BuildProgressLogger,
-    private val myPlanData: String
+    private val myPlanData: HelmPlanData
 ) {
     private fun getTemplate(): PebbleTemplate {
         val resourcesLoader = ClasspathLoader()
@@ -63,7 +64,7 @@ class HelmDiffReportGenerator(
         myLogger.message("Generating report...")
 
         val writer = FileWriter(reportFile)
-        getTemplate().evaluate(writer, mapOf("planData" to myPlanData))
+        getTemplate().evaluate(writer, mapOf("planData" to myPlanData.jsonData))
 
         return reportFile.absolutePath
     }

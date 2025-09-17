@@ -22,12 +22,6 @@ class HelmDiffSupport(
 
     private val myWatcher = watcher
     private val myFlowId = FlowGenerator.generateNewFlow()
-    private val knownChangeTypes = mapOf(
-        "ADD" to "add",
-        "MODIFY" to "change",
-        "REMOVE" to "destroy",
-        "OWNERSHIP" to "ownership"
-    )
 
     init {
         events.addListener(this)
@@ -76,22 +70,9 @@ class HelmDiffSupport(
         logger: BuildProgressLogger,
         planData: HelmPlanData
     ) {
-        logger.message("Updating build status")
-        if (planData.changes.isEmpty()) {
-            updateBuildStatus(logger, "No resource changes are planned")
-        } else {
-            val changesMap = planData.changes.groupBy { it.change }
-            val statusBuilder = StringBuilder()
-            knownChangeTypes.forEach {
-                if (!changesMap[it.key].isNullOrEmpty()) {
-                    statusBuilder.append(", ${changesMap[it.key]?.size} to ${it.value}")
-                }
-            }
-            changesMap.filter { !knownChangeTypes.contains(it.key) }.forEach {
-                statusBuilder.append(",${it.value.size} to ${it.key.toLowerCase()}")
-            }
-            updateBuildStatus(logger, statusBuilder.substring(2))
-        }
+        val summary = planData.summary()
+        logger.message("Updating build status: \"$summary\"")
+        updateBuildStatus(logger, planData.summary())
     }
 
     override fun beforeBuildFinish(runningBuild: AgentRunningBuild, buildStatus: BuildFinishedStatus) {
@@ -130,7 +111,7 @@ class HelmDiffSupport(
 
             ServiceMessageBlock(logger, "Handle Helm Diff output").use {
                 val planData: HelmPlanData = parsePlanDataFromFile(logger, planFile)
-                HelmDiffReportGenerator(logger, planData.jsonData).generate(reportFile)
+                HelmDiffReportGenerator(logger, planData).generate(reportFile)
 
                 if (configuration.updateBuildStatus()) {
                     updateBuildStatusWithPlanData(logger, planData)
