@@ -86,21 +86,21 @@ object HelmDiffParser {
         // Special rule: consider the resource removed if top-level field "kind" was removed and never added within the current scope
         if (topLevelKindMinus && !topLevelKindPlus) {
             val snippet = buildFullFromPrefixed(body, '-')
-            return HelmChange.Removed(header.namespace, header.name, header.kind, apiVersion, snippet)
+            return HelmChange("REMOVE", header.namespace, header.name, header.kind, apiVersion, snippet)
         }
 
         return when {
             hasPlus && !hasMinus -> {
                 val snippet = buildFullFromPrefixed(body, '+')
-                HelmChange.Added(header.namespace, header.name, header.kind, apiVersion, snippet)
+                HelmChange("ADD" ,header.namespace, header.name, header.kind, apiVersion, snippet)
             }
             !hasPlus && hasMinus -> {
                 val snippet = buildFullFromPrefixed(body, '-')
-                HelmChange.Removed(header.namespace, header.name, header.kind, apiVersion, snippet)
+                HelmChange("REMOVE", header.namespace, header.name, header.kind, apiVersion, snippet)
             }
             hasPlus && hasMinus -> {
                 val unified = buildUnifiedDiff(body)
-                HelmChange.Modified(header.namespace, header.name, header.kind, apiVersion, unified)
+                HelmChange("MODIFY", header.namespace, header.name, header.kind, apiVersion, unified)
             }
             else -> null
         }
