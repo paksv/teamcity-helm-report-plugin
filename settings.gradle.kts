@@ -4,4 +4,4 @@ include(
     "common"
 )
 
-rootProject.name = "helm-diff-report-plugin"
+rootProject.name = "teamcity-helm-diff-plugin"

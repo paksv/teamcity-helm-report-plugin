@@ -29,7 +29,7 @@ val envBuildNumber = System.getenv("BUILD_NUMBER")
 if (envBuildNumber != null) {
     version = envBuildNumber
 } else {
-    val sdf = SimpleDateFormat("yyyyMMdd-HH-mm-ss")
+    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
     version = sdf.format(Date())
 }
 

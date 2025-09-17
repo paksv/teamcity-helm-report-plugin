@@ -24,7 +24,7 @@ teamcity {
     server {
         descriptor = file("teamcity-plugin.xml")
         tokens = mapOf("Version" to rootProject.version)
-        archiveName = "helm-diff-report-plugin"
+        archiveName = rootProject.name
     }
 
     environments {
@@ -39,7 +39,12 @@ teamcity {
 
 
 tasks.withType<Jar> {
-    archiveBaseName.set("helm-diff-report-plugin")
+    archiveBaseName.set(rootProject.name)
+}
+
+// Ensure server plugin ZIP uses the root project name and no timestamp/version suffix
+tasks.named<Zip>("serverPlugin") {
+    archiveBaseName.set(rootProject.name)
 }
 
 task("teamcity") {
