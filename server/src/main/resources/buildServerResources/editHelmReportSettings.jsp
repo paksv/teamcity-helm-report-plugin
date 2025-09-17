@@ -9,14 +9,18 @@
 
 <tr>
     <td colspan="2">
-        <em>
-            Allows to parse Helm Diff report files to provide a report and/or control build results.<br/>
-            Produce JSON file by:<br/>
+            Enables Helm Diff report files to provide a report and/or control build results.<br/>
+        Supported formats: <br/>
+        1. Template JSON file:<br/>
             - <code>helm diff upgrade &lt;release-name&gt; &lt;folder-with-helm-chart&gt; --output template &gt;
             output.json</code>
+        <br/>
+        <br/>
+        2. Raw diff: <br/>
+        - <code>helm diff upgrade &lt;release-name&gt; &lt;folder-with-helm-chart&gt; &gt;
+        output.txt</code>
             <br/>
             If planned changes look good, you may want to continue to <code>apply</code> the changes.
-        </em>
     </td>
 </tr>
 
