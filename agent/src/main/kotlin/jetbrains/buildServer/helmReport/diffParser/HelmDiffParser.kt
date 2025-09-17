@@ -118,14 +118,14 @@ object HelmDiffParser {
         return null
     }
 
-    // Build full YAML for added/removed by concatenating only the lines with given prefix,
-    // removing that prefix and the following space if present.
+    // Build snippet for added/removed keeping raw diff lines with the desired prefix (+/-).
+    // Empty lines (including +/- lines with no content) are skipped.
     private fun buildFullFromPrefixed(body: List<String>, prefixChar: Char): String {
         val out = StringBuilder()
         for (raw in body) {
             val (pref, content) = splitPrefix(raw)
-            if (pref == prefixChar) {
-                if (content.isNotBlank()) out.append(content).append('\n')
+            if (pref == prefixChar && content.isNotBlank()) {
+                out.append(raw).append('\n')
             }
         }
         return out.toString().trimEnd()
@@ -195,64 +195,20 @@ object HelmDiffParser {
         return result.toString().trimEnd()
     }
 
-    // Build a real unified diff: include a few unchanged context lines before/after each change hunk.
-    // - Do NOT add artificial hierarchy keys.
-    // - Ignore empty +/- lines (with no actual content).
-    // - Context lines are original lines without any +/- prefix.
+    // Return the original YAML diff piece as-is (excluding the header), preserving all symbols (+/-) and indentation.
+    // We only trim leading/trailing completely empty lines; interior lines are kept verbatim.
     private fun buildUnifiedDiff(body: List<String>): String {
-        data class Line(val index: Int, val pref: Char?, val content: String)
-
-        // Preprocess lines and collect indices of meaningful changes
-        val lines = mutableListOf<Line>()
-        val changeIdxs = mutableListOf<Int>()
-        body.forEachIndexed { idx, raw ->
-            val (p, c) = splitPrefix(raw)
-            val trimmed = c
-            val isMeaningfulChange = (p == '+' || p == '-') && trimmed.isNotBlank()
-            // Keep all lines, but we will only emit context for pref == null lines
-            lines += Line(idx, p, trimmed)
-            if (isMeaningfulChange) changeIdxs += idx
-        }
-        if (changeIdxs.isEmpty()) return ""
-
-        // Build hunks with N lines of context before/after
-        val CONTEXT = 3
-        data class Hunk(var start: Int, var endExcl: Int)
-        val hunks = mutableListOf<Hunk>()
-
-        var curStart = maxOf(0, changeIdxs.first() - CONTEXT)
-        var curEndExcl = minOf(lines.size, changeIdxs.first() + CONTEXT + 1)
-        var lastChange = changeIdxs.first()
-
-        for (k in 1 until changeIdxs.size) {
-            val ci = changeIdxs[k]
-            // If the next change falls within or close to the current hunk's context, extend it
-            if (ci <= curEndExcl + CONTEXT) {
-                curEndExcl = minOf(lines.size, maxOf(curEndExcl, ci + CONTEXT + 1))
-                lastChange = ci
-            } else {
-                hunks += Hunk(curStart, curEndExcl)
-                curStart = maxOf(0, ci - CONTEXT)
-                curEndExcl = minOf(lines.size, ci + CONTEXT + 1)
-                lastChange = ci
-            }
-        }
-        hunks += Hunk(curStart, curEndExcl)
-
-        // Emit hunks
-        val out = StringBuilder()
-        hunks.forEachIndexed { idx, h ->
-            if (idx > 0) out.append('\n')
-            for (i in h.start until h.endExcl) {
-                val (p, c) = Pair(lines[i].pref, lines[i].content)
-                when {
-                    (p == '+' || p == '-') && c.isNotBlank() -> out.append(p).append(' ').append(c).append('\n')
-                    p == null && c.isNotBlank() -> out.append(' ').append(c).append('\n')
-                    else -> { /* skip empty context or empty +/- lines */ }
-                }
-            }
-        }
-        return out.toString().trimEnd()
+        if (body.isEmpty()) return ""
+        var start = 0
+        var end = body.size - 1
+        // Trim leading empty lines
+        while (start <= end && body[start].isBlank()) start++
+        // Trim trailing empty lines
+        while (end >= start && body[end].isBlank()) end--
+        if (start > end) return ""
+        val slice = body.subList(start, end + 1)
+        // Join exactly as present
+        return slice.joinToString("\n")
     }
 
     // Walk backwards from anchorIndex to find the nearest parent keys with indent < minIndent.

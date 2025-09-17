@@ -47,12 +47,12 @@
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         thead th {
             text-align: left; font-weight: 600; color: var(--muted);
-            padding: 12px 14px; border-bottom: 1px solid var(--border);
+            padding: 10px 14px; border-bottom: 1px solid var(--border);
             position: sticky; top: 0; background: var(--bg); z-index: 1;
         }
         tbody tr { background: var(--row); }
         tbody tr + tr td { border-top: 1px solid var(--border); }
-        td { padding: 12px 14px; white-space: nowrap; }
+        td { padding: 10px 14px; white-space: nowrap; }
         td.kind, td.name, td.ns { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
         code { background: var(--ring-selected-background); border: 1px solid var(--border); padding: 1px 6px; border-radius: 6px; }
         .pill {
@@ -73,6 +73,30 @@
         .icon-add { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path fill="%23000" d="M5 1h2v4h4v2H7v4H5V7H1V5h4z"/></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path fill="%23000" d="M5 1h2v4h4v2H7v4H5V7H1V5h4z"/></svg>'); }
         .icon-modified { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><g stroke="%23000" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10"/><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></g></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><g stroke="%23000" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10"/><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></g></svg>'); }
         .icon-remove { -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><rect fill="%23000" x="1" y="5" width="10" height="2"/></svg>'); mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><rect fill="%23000" x="1" y="5" width="10" height="2"/></svg>'); }
+
+        /* Expand/collapse button */
+        .expander-btn { appearance: none; background: transparent; border: none; color: var(--muted); width: 20px; height: 20px; border-radius: 6px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding: 0; }
+        .expander-btn:hover { color: var(--fg); }
+        .chev { display:inline-grid; place-items:center; width:16px; height:16px; transition: transform .15s ease; transform-origin: 50% 50%; }
+        .chev::before { content: '\25B8'; /* ▶ */ display:block; line-height: 16px; font-size: 18px; }
+        .expander-btn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+        /* Diff styles */
+        .diff-wrap { background: var(--ring-selected-background); border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; overflow: hidden; }
+        .diff { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; line-height: 1.5; margin: 0; overflow: auto; white-space: pre; padding: 0 12px; }
+        .diff-line { display:block; padding: 0 6px; border-left: 3px solid transparent; }
+        .diff-line.added { color: color-mix(in lab, var(--added) 70%, var(--fg) 30%); background: color-mix(in lab, var(--added) 10%, transparent); border-left-color: color-mix(in lab, var(--added) 70%, var(--fg) 30%); }
+        .diff-line.deleted { color: color-mix(in lab, var(--deleted) 70%, var(--fg) 30%); background: color-mix(in lab, var(--deleted) 10%, transparent); border-left-color: color-mix(in lab, var(--deleted) 70%, var(--fg) 30%); }
+        .diff-line.hunk { color: color-mix(in lab, var(--changed) 70%, var(--fg) 30%); background: color-mix(in lab, var(--changed) 10%, transparent); }
+        .diff-line.meta, .diff-line.file { color: var(--muted); }
+        .diff-row { display: none; }
+        .diff-row.open { display: table-row; }
+        td.diff-cell { padding-top: 0; padding-bottom: 12px; }
+
+        /* Column hover highlight */
+        th, td { transition: background-color .12s ease; }
+        .col-hover { background-color: var(--ring-selected-background); }
+        tbody tr.main-row td { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -88,6 +112,7 @@
     <table aria-label="Helm diff changes">
         <thead>
         <tr>
+            <th style="width:28px">Diff</th>
             <th style="width:120px">Change</th>
             <th style="width:120px">Kind</th>
             <th>Name</th>
@@ -95,7 +120,7 @@
             <th style="width:120px">API</th>
         </tr>
         </thead>
-        <tbody id="rows"><tr><td colspan="5" style="color:var(--muted)">No data</td></tr></tbody>
+        <tbody id="rows"><tr><td colspan="6" style="color:var(--muted)">No data</td></tr></tbody>
     </table>
 </div>
 
@@ -141,17 +166,92 @@
     const rows = document.getElementById("rows");
     rows.innerHTML = ""; // clear placeholder
 
+    // Escape HTML for safe rendering in the diff
+    const escapeHtml = (s = "") => String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Render unified diff snippet into HTML with line-level classes
+    const renderUnifiedDiff = (snippet = "") => {
+        if (!snippet || typeof snippet !== 'string') return '<div class="diff">No diff</div>';
+        const lines = snippet.replace(/\r\n?/g, '\n').split('\n');
+        const html = lines.map(line => {
+            let cls = 'context';
+            if (line.startsWith('+++') || line.startsWith('---')) cls = 'file';
+            else if (line.startsWith('@@')) cls = 'hunk';
+            else if (line.startsWith('+')) cls = 'added';
+            else if (line.startsWith('-')) cls = 'deleted';
+            else if (line.startsWith('diff ') || line.startsWith('index ') || line.startsWith('new file') || line.startsWith('deleted file')) cls = 'meta';
+            return `<span class="diff-line ${cls}">${escapeHtml(line)}</span>`;
+        }).join('');
+        return `<pre class="diff">${html}</pre>`;
+    };
+
     data.forEach(item => {
         const bucket = normalizeChange(item.change);
+
+        // Main row
         const tr = document.createElement("tr");
+        tr.className = "main-row";
         tr.innerHTML = `
+      <td><button class="expander-btn" type="button" aria-expanded="false" aria-label="Show diff"><span class="chev" aria-hidden="true"></span><span class="sr">Toggle diff</span></button></td>
       <td><span class="pill ${pillClass(bucket)}" title="${item.change || bucket}">${iconHtml(bucket)}<span class=\"sr\">${bucket}</span></span></td>
       <td class="kind"><code>${item.kind || ""}</code></td>
       <td class="name" title="${item.name || ""}">${item.name || ""}</td>
       <td class="ns"><code>${item.namespace || ""}</code></td>
       <td><code>${item.api || ""}</code></td>
     `;
+
+        // Details diff row (collapsed by default)
+        const diffTr = document.createElement("tr");
+        diffTr.className = "diff-row";
+        const diffHtml = renderUnifiedDiff(item.snippet || "");
+        diffTr.innerHTML = `<td></td><td class="diff-cell" colspan="5"><div class="diff-wrap">${diffHtml}</div></td>`;
+
+        // Toggle behavior
+        const btn = tr.querySelector('.expander-btn');
+        btn.addEventListener('click', () => {
+            const isOpen = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', String(!isOpen));
+            diffTr.classList.toggle('open', !isOpen);
+        });
+
         rows.appendChild(tr);
+        rows.appendChild(diffTr);
+    });
+
+    // Column hover highlight logic
+    const table = document.querySelector('table');
+    const clearColHover = () => {
+        document.querySelectorAll('.col-hover').forEach(el => el.classList.remove('col-hover'));
+    };
+    table.addEventListener('mousemove', (e) => {
+        const cell = e.target.closest('td,th');
+        if (!cell || !table.contains(cell)) return;
+        const idx = cell.cellIndex;
+        if (idx == null || idx < 0) return;
+        clearColHover();
+        // Header
+        const headRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
+        if (headRow && headRow.cells[idx]) headRow.cells[idx].classList.add('col-hover');
+        // Body
+        const bodies = table.tBodies ? Array.from(table.tBodies) : [];
+        bodies.forEach(tb => Array.from(tb.rows).forEach(r => {
+            if (!r.matches('.main-row')) return;
+            const c = r.cells[idx];
+            if (c) c.classList.add('col-hover');
+        }));
+    });
+    table.addEventListener('mouseleave', clearColHover);
+
+    // Click anywhere in the main row to toggle expand
+    rows.addEventListener('click', (e) => {
+        if (e.target.closest('.expander-btn')) return; // let the button handle its own click
+        const row = e.target.closest('tr.main-row');
+        if (!row) return;
+        const btn = row.querySelector('.expander-btn');
+        if (btn) btn.click();
     });
 
     // Example of using a Ring UI button: simple refresh action
