@@ -12,7 +12,8 @@
         <em>
             Allows to parse Helm Diff report files to provide a report and/or control build results.<br/>
             Produce JSON file by:<br/>
-            - <code>helm diff upgrade <release-name> <folder-with-helm-chart> --output template >> output.json</code><br/>
+            - <code>helm diff upgrade &lt;release-name&gt; &lt;folder-with-helm-chart&gt; --output template &gt;
+            output.json</code>
             <br/>
             If planned changes look good, you may want to continue to <code>apply</code> the changes.
         </em>
