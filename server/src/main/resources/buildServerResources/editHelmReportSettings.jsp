@@ -12,10 +12,9 @@
         <em>
             Allows to parse Helm Diff report files to provide a report and/or control build results.<br/>
             Produce JSON file by:<br/>
-            - <code>terraform plan -out <binary output file path></code><br/>
-            - <code>terraform show -json <binary output file path> >> output.json</code><br/>
+            - <code>helm diff upgrade <release-name> <folder-with-helm-chart> --output template >> output.json</code><br/>
             <br/>
-            If planned changes look good, you may reuse the produced plan file to <code>apply</code> the changes.
+            If planned changes look good, you may want to continue to <code>apply</code> the changes.
         </em>
     </td>
 </tr>
@@ -36,10 +35,11 @@
     </td>
 </tr>
 
+<%--
 <tr class="advancedSetting" id="check_protected_resources">
     <th><label for="${protectedResourcesBean.key}">${protectedResourcesBean.label}</label></th>
     <td>
         <props:textProperty name="${protectedResourcesBean.key}" className="mediumField"/>
         <span class="smallNote">${protectedResourcesBean.description}</span>
     </td>
-</tr>
+</tr>--%>

@@ -8,7 +8,6 @@ import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.helmReport.HelmDiffFeatureConstants
 import java.io.File
 import java.io.FileWriter
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.pebbletemplates.pebble.extension.Filter
 import io.pebbletemplates.pebble.template.EvaluationContext
 

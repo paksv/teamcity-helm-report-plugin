@@ -8,11 +8,9 @@ import jetbrains.buildServer.messages.serviceMessages.ServiceMessageTypes
 import jetbrains.buildServer.helmReport.jsonOutput.ParsingUtil
 import jetbrains.buildServer.helmReport.jsonOutput.model.HelmChange
 import jetbrains.buildServer.helmReport.jsonOutput.model.HelmPlanData
-import jetbrains.buildServer.helmReport.jsonOutput.model.PlanData
 import jetbrains.buildServer.helmReport.jsonOutput.model.ResourceChange
 import jetbrains.buildServer.helmReport.report.HelmDiffReportGenerator
 import jetbrains.buildServer.util.EventDispatcher
-import jetbrains.buildServer.util.regex.MatcherUtil
 import java.io.Closeable
 import java.io.File
 
@@ -24,6 +22,12 @@ class HelmDiffSupport(
 
     private val myWatcher = watcher
     private val myFlowId = FlowGenerator.generateNewFlow()
+    private val knownChangeTypes = mapOf(
+        "ADD" to "add",
+        "MODIFY" to "change",
+        "REMOVE" to "destroy",
+        "OWNERSHIP" to "ownership"
+    )
 
     init {
         events.addListener(this)
@@ -79,13 +83,20 @@ class HelmDiffSupport(
         planData: HelmPlanData
     ) {
         logger.message("Updating build status")
-        if (!planData.hasChangedResources) {
+        if (planData.changes.isEmpty()) {
             updateBuildStatus(logger, "No resource changes are planned")
         } else {
-            updateBuildStatus(
-                logger,
-                        "${planData.changedResources.size} to change, "
-            )
+            val changesMap = planData.changes.groupBy { it.change }
+            val statusBuilder = StringBuilder()
+            knownChangeTypes.forEach {
+                if (!changesMap[it.key].isNullOrEmpty()) {
+                    statusBuilder.append(", ${changesMap[it.key]?.size} to ${it.value}")
+                }
+            }
+            changesMap.filter { !knownChangeTypes.contains(it.key) }.forEach {
+                statusBuilder.append(",${it.value.size} to ${it.key.toLowerCase()}")
+            }
+            updateBuildStatus(logger, statusBuilder.substring(2))
         }
     }
 

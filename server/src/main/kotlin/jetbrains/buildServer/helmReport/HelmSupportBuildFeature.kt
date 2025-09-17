@@ -22,7 +22,7 @@ class HelmSupportBuildFeature(descriptor: PluginDescriptor) : BuildFeature() {
             val config = HelmDiffFeatureConfiguration(params)
 
             if (config.isReportEnabled()) {
-                appendLine("Provide report tab on changes in '${config.getPlanJsonFile()}'")
+                appendLine("Provide report tab with changes in '${config.getPlanJsonFile()}'")
             }
 
             if (config.updateBuildStatus()) {
