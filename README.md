@@ -7,7 +7,7 @@ The key features are:
 - update the build status with the count of detected changes
 
 ### Example of the report tab
-![helm_build_report_tab.png](media/helm_build_report_tab.png)
+![configuration_of_build_feature_with_changes.png](media/configuration_of_build_feature_with_changes.png)
 
 ### Example of the build status in the Overview page
 ![helm_build_status.png](media/helm_build_status.png)
